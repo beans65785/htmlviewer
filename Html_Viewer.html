@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Html viewer - W3Schools Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { 
+            --split-pos: 50%; 
+            --w3-green: #04AA6D;
+            --w3-dark: #282A35;
+        }
+        body { overflow: hidden; height: 100vh; display: flex; flex-direction: column; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* W3 Header Style */
+        .w3-header { 
+            background-color: white; 
+            padding: 10px 20px; 
+            border-bottom: 1px solid #f1f1f1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .main-container { display: flex; flex: 1; position: relative; overflow: hidden; background-color: #E7E9EB; }
+        
+        #editor-side { width: var(--split-pos); min-width: 50px; display: flex; flex-direction: column; padding: 15px; gap: 15px; }
+        #preview-side { flex: 1; min-width: 50px; display: flex; flex-direction: column; padding: 15px; transition: transform 0.3s ease; }
+        
+        .card { 
+            background: white; 
+            border-radius: 5px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .editor-card { flex: 1; }
+        .library-card { height: 180px; shrink: 0; }
+
+        .card-header {
+            background-color: #f1f1f1;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #212121;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #resizer { 
+            width: 10px; cursor: col-resize; background: transparent; 
+            z-index: 50;
+        }
+        #resizer:hover { background: rgba(4, 170, 109, 0.2); }
+
+        iframe { width: 100%; height: 100%; border: none; background: white; }
+        
+        .w3-btn {
+            background-color: var(--w3-green);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .w3-btn:hover { background-color: #059862; }
+
+        textarea {
+            flex: 1;
+            width: 100%;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            border: none;
+            outline: none;
+            resize: none;
+            background-color: #fff;
+            color: #000;
+        }
+
+        .media-chip {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .media-chip:hover {
+            background: #eee;
+            border-color: var(--w3-green);
+        }
+        .media-chip:active {
+            transform: translateY(1px);
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; }
+            #editor-side { width: 100% !important; height: var(--split-pos); }
+            #resizer { width: 100%; height: 10px; cursor: row-resize; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="w3-header">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold" style="color: var(--w3-dark)">Html viewer</h1>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1 mr-4">
+                <label class="text-[10px] font-bold text-gray-500 uppercase">Background:</label>
+                <input type="color" id="bgColorPicker" value="#ffffff" class="w-6 h-6 cursor-pointer">
+            </div>
+            <button id="rotateBtn" class="text-xs font-bold px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">Rotate</button>
+            <button id="noFontsBtn" class="text-xs font-bold px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">No Fonts</button>
+            <button class="w3-btn ml-2" onclick="updatePreview()">Run ❯</button>
+        </div>
+    </header>
+
+    <div class="main-container" id="container">
+        <div id="editor-side">
+            <!-- Library Section -->
+            <div class="card library-card">
+                <div class="card-header">
+                    <span>Media Library (Click to Copy)</span>
+                </div>
+                <div class="p-3 overflow-y-auto flex flex-wrap gap-2 content-start h-full" id="libraryList">
+                    <!-- Loaded via JS -->
+                </div>
+            </div>
+
+            <!-- Editor Section -->
+            <div class="card editor-card">
+                <div class="card-header">
+                    <span>HTML Editor</span>
+                </div>
+                <!-- Updated placeholder to match the suggested 180p snippet with source tags -->
+                <textarea id="codeEditor" spellcheck="false" placeholder='Example: <video width="320" height="180" controls><source src="jeffys_airhorn_pranking_time.mp4" type="video/mp4"></video>'></textarea>
+            </div>
+        </div>
+
+        <div id="resizer"></div>
+
+        <div id="preview-side">
+            <div class="card h-full">
+                <div class="card-header">
+                    Result
+                </div>
+                <iframe id="preview"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Copied to clipboard!</div>
+
+    <script>
+        const resizer = document.getElementById('resizer');
+        const codeEditor = document.getElementById('codeEditor');
+        const preview = document.getElementById('preview');
+        const bgColorPicker = document.getElementById('bgColorPicker');
+        const rotateBtn = document.getElementById('rotateBtn');
+        const noFontsBtn = document.getElementById('noFontsBtn');
+        const libraryList = document.getElementById('libraryList');
+        const toast = document.getElementById('toast');
+        
+        let isResizing = false;
+        let isRotated = false;
+        let useFonts = true;
+
+        // Asset URLs
+        const ASSETS = {
+            "s25cbsah.mp4": "https://leopard.hosting.pecon.us/dl/cstvx/s25cbsah.mp4",
+            "My_project_2.mp4": "https://leopard.hosting.pecon.us/dl/ssmkj/My_project_2.mp4",
+            "Sora2YTP_PenguinIceCream.mp4": "https://file.garden/aZbEJDTndHWJA2uA/Sora2YTP_PenguinIceCream.mp4",
+            "green_bull_smtc_15.mp4": "https://www.image2url.com/r2/default/videos/1778014763181-40c3b651-cc84-4eff-b8ba-f22a4660021a.mp4",
+            "jeffys_airhorn_pranking_time.mp4": "https://file.garden/aZbEJDTndHWJA2uA/jeffys_airhorn_pranking_time.mp4",
+            "sp_image.png": "https://file.garden/aZbEJDTndHWJA2uA/sp_image.png",
+            "25d3cdd1b98cd6fffea9a6b9ecdd9e7e.png": "https://leopard.hosting.pecon.us/dl/bzklp/25d3cdd1b98cd6fffea9a6b9ecdd9e7e.png",
+            "psmtics2.mp3": "https://file.garden/aZbEJDTndHWJA2uA/psmtics2.mp3",
+            "20260521031_SquidMomYellingJimmy_ytp.mp3": "https://leopard.hosting.pecon.us/dl/vdxya/20260521031_SquidMomYellingJimmy_ytp.mp3"
+        };
+
+        function initLibrary() {
+            libraryList.innerHTML = '';
+            Object.keys(ASSETS).forEach(key => {
+                const chip = document.createElement('div');
+                chip.className = 'media-chip';
+                chip.innerHTML = `<span>${key}</span>`;
+                chip.onclick = () => copyToClipboard(key);
+                libraryList.appendChild(chip);
+            });
+        }
+
+        function copyToClipboard(text) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 2000);
+        }
+
+        bgColorPicker.addEventListener('input', updatePreview);
+        
+        rotateBtn.addEventListener('click', () => {
+            isRotated = !isRotated;
+            preview.style.transform = isRotated ? 'rotate(90deg)' : 'none';
+            rotateBtn.style.backgroundColor = isRotated ? '#ddd' : 'transparent';
+        });
+
+        noFontsBtn.addEventListener('click', () => {
+            useFonts = !useFonts;
+            noFontsBtn.innerText = useFonts ? "No Fonts" : "System Fonts";
+            updatePreview();
+        });
+
+        const startDrag = () => { isResizing = true; document.body.style.cursor = 'col-resize'; };
+        const endDrag = () => { isResizing = false; document.body.style.cursor = 'default'; };
+
+        resizer.addEventListener('mousedown', startDrag);
+        window.addEventListener('mouseup', endDrag);
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            let val = (window.innerWidth > 768) 
+                ? (e.clientX / window.innerWidth) * 100 
+                : ((e.clientY - 60) / (window.innerHeight - 60)) * 100;
+            if (val > 10 && val < 90) document.documentElement.style.setProperty('--split-pos', `${val}%`);
+        });
+
+        function updatePreview() {
+            let html = codeEditor.value;
+            let bgColor = bgColorPicker.value;
+            
+            let processedHtml = html;
+            for (const [key, url] of Object.entries(ASSETS)) {
+                const escapedKey = key.replace(/\./g, '\\.');
+                const regex = new RegExp(escapedKey, 'g');
+                processedHtml = processedHtml.replace(regex, url);
+            }
+
+            const fontStyle = useFonts 
+                ? 'font-family: "Segoe UI", Tahoma, sans-serif;' 
+                : 'font-family: serif;';
+
+            const previewDoc = preview.contentDocument || preview.contentWindow.document;
+            previewDoc.open();
+            previewDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { 
+                            ${fontStyle}
+                            padding: 20px; margin: 0; 
+                            background: ${bgColor};
+                            text-align: left;
+                        }
+                        video { 
+                            display: block;
+                            margin-bottom: 20px;
+                        }
+                        img, audio { 
+                            max-width: 100%; height: auto;
+                            display: block;
+                            margin-bottom: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${processedHtml}
+                </body>
+                </html>
+            `);
+            previewDoc.close();
+        }
+
+        codeEditor.addEventListener('input', updatePreview);
+
+        window.onload = () => {
+            initLibrary();
+            codeEditor.value = ''; 
+            updatePreview();
+        };
+    </script>
+</body>
+</html>
